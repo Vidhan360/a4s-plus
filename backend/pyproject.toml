@@ -1,0 +1,41 @@
+[project]
+name = "a4s-plus-backend"
+version = "1.0.0"
+description = "A4S+ AI-Assisted Altitude Safety System - backend API, risk engine, and ML pipeline"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["alembic/versions", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF"]
+ignore = [
+  "B008",   # FastAPI dependency injection uses function calls in defaults
+  "RUF012", # mutable class attrs without ClassVar are used for Pydantic/SQLAlchemy config
+  "SIM108", # ternaries are not always clearer than if/else here
+  "UP017", # datetime.timezone.utc is kept for explicitness
+  "RUF001", # en dashes are intentional in human-facing strings
+  "SIM103", # explicit boolean branches read better in the cost/passability checks
+  "RUF059", # numpy tuple unpacking sometimes discards an axis
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true
+plugins = []
+exclude = "(alembic/versions|tests)"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning"]

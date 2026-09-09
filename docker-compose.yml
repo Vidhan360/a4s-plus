@@ -1,0 +1,130 @@
+# A4S+ — full stack, production-shaped local deployment.
+#
+#   docker compose up --build
+#   -> frontend  http://localhost:3000
+#   -> API docs  http://localhost:8000/api/docs
+#
+# HONESTY NOTE: this compose file was authored and reviewed but never executed,
+# because the sandbox used to build A4S+ has no Docker daemon. The equivalent
+# stack *was* verified by running Postgres, Redis, uvicorn and the Next.js
+# production server directly on the host (see README "Verification status").
+
+name: a4s-plus
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: a4s
+      POSTGRES_PASSWORD: a4s-local-dev
+      POSTGRES_DB: a4s
+      # UTF-8 is REQUIRED: several tables store JSONB, which rejects byte
+      # sequences that a SQL_ASCII cluster would happily accept.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U a4s -d a4s"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    environment: &backend-env
+      A4S_ENV: production
+      A4S_DEBUG: "false"
+      A4S_LOG_LEVEL: INFO
+      A4S_DATABASE_URL: postgresql+asyncpg://a4s:a4s-local-dev@postgres:5432/a4s
+      A4S_TEST_DATABASE_URL: postgresql+asyncpg://a4s:a4s-local-dev@postgres:5432/a4s_test
+      A4S_REDIS_URL: redis://redis:6379/0
+      A4S_JWT_SECRET: ${A4S_JWT_SECRET:?set A4S_JWT_SECRET in .env before starting the stack}
+      A4S_CORS_ORIGINS: http://localhost:3000
+      A4S_SEED_ADMIN_PASSWORD: ${A4S_SEED_ADMIN_PASSWORD:-Adm1n-A4Splus-2026!}
+      A4S_SEED_COMMANDER_PASSWORD: ${A4S_SEED_COMMANDER_PASSWORD:-Cmdr-A4Splus-2026!}
+      A4S_SEED_MEDICAL_PASSWORD: ${A4S_SEED_MEDICAL_PASSWORD:-Medic-A4Splus-2026!}
+      A4S_SEED_OPERATOR_PASSWORD: ${A4S_SEED_OPERATOR_PASSWORD:-Oper-A4Splus-2026!}
+      A4S_SEED_VIEWER_PASSWORD: ${A4S_SEED_VIEWER_PASSWORD:-View-A4Splus-2026!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  seed:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    command: ["python", "-m", "seeds.seed", "--history", "90"]
+    environment: *backend-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    environment: *backend-env
+    volumes:
+      # Trained model artifacts are produced by the `train` profile and shared
+      # read-only with the inference path.
+      - model-artifacts:/app/ml/artifacts
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        # Browser-visible origin, inlined at build time by Next.js.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  # Optional: retrain and re-compare the models. Long-running and CPU-heavy.
+  #   docker compose --profile train run --rm train
+  train:
+    profiles: ["train"]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    command: ["python", "-m", "ml.train", "--subjects", "480", "--epochs", "30"]
+    environment: *backend-env
+    volumes:
+      - model-artifacts:/app/ml/artifacts
+    restart: "no"
+
+volumes:
+  postgres-data:
+  model-artifacts:

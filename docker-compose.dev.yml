@@ -1,0 +1,45 @@
+# A4S+ — developer overlay: hot reload for both tiers.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# HONESTY NOTE: authored but not executed (no Docker daemon in the build
+# sandbox). See README "Verification status".
+
+name: a4s-plus
+
+services:
+  api:
+    build:
+      target: runtime
+    environment:
+      A4S_ENV: development
+      A4S_DEBUG: "true"
+      A4S_LOG_LEVEL: DEBUG
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+        "--reload-dir",
+        "/app/app",
+      ]
+    volumes:
+      - ./backend:/app
+      - model-artifacts:/app/ml/artifacts
+
+  frontend:
+    build:
+      target: build
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/e2e:/app/e2e
+      - ./frontend/public:/app/public

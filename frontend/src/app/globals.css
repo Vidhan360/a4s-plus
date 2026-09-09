@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark-only palette. Values are HSL channels so Tailwind's opacity
+       modifiers (bg-card/60) keep working. */
+    --background: 222 47% 5%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 40% 8%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 44% 7%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 190 95% 52%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 220 28% 16%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 220 24% 14%;
+    --muted-foreground: 215 20% 66%;
+
+    --accent: 262 83% 66%;
+    --accent-foreground: 222 47% 6%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 28% 20%;
+    --input: 217 28% 20%;
+    --ring: 190 95% 52%;
+
+    --risk-low: 152 68% 45%;
+    --risk-moderate: 42 96% 56%;
+    --risk-high: 25 95% 57%;
+    --risk-critical: 0 84% 60%;
+
+    --radius: 0.85rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(70% 55% at 15% -10%, hsl(190 95% 52% / 0.1) 0%, transparent 60%),
+      radial-gradient(60% 50% at 100% 0%, hsl(262 83% 66% / 0.1) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-primary/30;
+  }
+
+  /* Slim, unobtrusive scrollbars: the console shows a lot of dense tables. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring/70 ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* The single glass surface used by every panel in the console. */
+  .glass {
+    @apply rounded-lg border border-white/[0.07] bg-card/60 shadow-glass backdrop-blur-xl;
+  }
+
+  .glass-strong {
+    @apply rounded-lg border border-white/10 bg-card/85 shadow-glass backdrop-blur-2xl;
+  }
+
+  .stat-value {
+    @apply font-mono text-3xl font-semibold tracking-tight tabular-nums;
+  }
+
+  .label-muted {
+    @apply text-[0.68rem] font-medium uppercase tracking-[0.13em] text-muted-foreground;
+  }
+
+  .hairline {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Skeleton shimmer used by every loading state. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.06),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}

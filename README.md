@@ -342,4 +342,4 @@ Every test in this repository has been strictly verified:
 
 ## 13. License & Acknowledgements
 
-Created by **Vidhan Mishra** ([@Vidhan360](https://github.com/Vidhan360)) as part of **Team The Third Eye** for the COMPOSIT 2026 student innovation challenge. Built for research and educational purposes.
+Created by **Vidhan Mishra and Ishika Masih** ([@Vidhan360](https://github.com/Vidhan360)) ([@ishikamasih369-oss](https://github.com/ishikamasih369-oss)) as part of **Team The Third Eye** for the COMPOSIT 2026 student innovation challenge. Built for research and educational purposes.

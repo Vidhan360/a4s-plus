@@ -1,0 +1,34 @@
+# Version control & IDE
+.git
+.github
+.vscode
+.idea
+
+# Python virtual environments, bytecode, and test caches
+**/.venv
+**/venv
+**/env
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Node & Next.js build caches and dependencies
+**/node_modules
+**/.next
+**/out
+**/coverage
+**/test-results
+**/playwright-report
+
+# Environment secrets and local logs
+.env
+.env.*
+!.env.example
+!frontend/.env.local.example
+*.log
+.pgdata
+
+# Docs not needed in container images
+docs/

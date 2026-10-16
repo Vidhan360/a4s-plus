@@ -15,5 +15,11 @@ coverage/
 .ruff_cache/
 test-results/
 playwright-report/
-backend/ml/artifacts/*/
+# ML artifacts: preserve pre-trained models required for production inference
+backend/ml/artifacts/*
 !backend/ml/artifacts/.gitkeep
+!backend/ml/artifacts/*.json
+!backend/ml/artifacts/gradient_boosting/
+!backend/ml/artifacts/gradient_boosting/**
+!backend/ml/artifacts/lstm/
+!backend/ml/artifacts/lstm/**

@@ -33,20 +33,20 @@ def _key(request: Request) -> str:
 
 def _build_limiter() -> Limiter:
     storage_uri = settings.redis_url if settings.env != "test" else None
-    try:
-        return Limiter(
-            key_func=_key,
-            default_limits=[settings.rate_limit_default],
-            storage_uri=storage_uri,
-            headers_enabled=True,
-        )
-    except Exception:
-        logger.warning("rate_limit_storage_fallback_memory")
-        return Limiter(
-            key_func=_key,
-            default_limits=[settings.rate_limit_default],
-            headers_enabled=True,
-        )
+    if storage_uri:
+        try:
+            import redis
+            r = redis.from_url(storage_uri, socket_connect_timeout=0.2, socket_timeout=0.2)
+            r.ping()
+        except Exception:
+            logger.warning("rate_limit_storage_fallback_memory")
+            storage_uri = None
+    return Limiter(
+        key_func=_key,
+        default_limits=[settings.rate_limit_default],
+        storage_uri=storage_uri,
+        headers_enabled=True,
+    )
 
 
 limiter = _build_limiter()

@@ -1,0 +1,5 @@
+# Enforce LF endings on shell scripts so they execute properly in Linux containers
+*.sh text eol=lf
+*.Dockerfile text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf

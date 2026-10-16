@@ -84,9 +84,8 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
     environment: *backend-env
     volumes:
-      # Trained model artifacts are produced by the `train` profile and shared
-      # read-only with the inference path.
-      - model-artifacts:/app/ml/artifacts
+      # Pre-trained models from the repository; available immediately for inference.
+      - ./backend/ml/artifacts:/app/ml/artifacts:ro
     ports:
       - "8000:8000"
     depends_on:
@@ -122,9 +121,8 @@ services:
     command: ["python", "-m", "ml.train", "--subjects", "480", "--epochs", "30"]
     environment: *backend-env
     volumes:
-      - model-artifacts:/app/ml/artifacts
+      - ./backend/ml/artifacts:/app/ml/artifacts
     restart: "no"
 
 volumes:
   postgres-data:
-  model-artifacts:

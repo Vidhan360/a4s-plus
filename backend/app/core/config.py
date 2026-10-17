@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     refresh_token_days: int = 7
     max_failed_logins: int = 5
     lockout_minutes: int = 15
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,https://a4s-plus.vercel.app"
     rate_limit_default: str = "200/minute"
     rate_limit_login: str = "10/minute"
     rate_limit_refresh: str = "30/minute"
@@ -194,7 +194,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        origins = [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+        prod_origin = "https://a4s-plus.vercel.app"
+        if prod_origin not in origins:
+            origins.append(prod_origin)
+        return origins
 
     @property
     def is_production(self) -> bool:

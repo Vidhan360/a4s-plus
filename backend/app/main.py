@@ -134,7 +134,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID"],
@@ -181,7 +181,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("unhandled error on %s %s", request.method, request.url.path)
-        return JSONResponse(
+        response = JSONResponse(
             status_code=500,
             content=error_body(
                 "internal_error",
@@ -190,6 +190,13 @@ def create_app() -> FastAPI:
                 request_id_ctx.get(),
             ),
         )
+        origin = request.headers.get("origin")
+        if origin:
+            allowed = set(settings.cors_origin_list)
+            if origin in allowed or "*" in allowed:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Vary"] = "Origin"
+        return response
 
     app.include_router(api_router)
 

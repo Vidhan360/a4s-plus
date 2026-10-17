@@ -51,6 +51,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=5 \
     CMD curl -fsS http://127.0.0.1:8000/api/v1/health || exit 1
 
-# Migrations are applied by the `migrate` one-shot service in docker-compose so
-# that the API can be scaled horizontally without racing on Alembic.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# Apply pending database migrations on startup before starting the server
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"]

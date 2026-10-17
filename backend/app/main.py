@@ -102,6 +102,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 model.get("load_error"),
             )
     config_service.invalidate()
+
+    if settings.env != "test":
+        try:
+            from app.core.migration_runner import run_auto_seed, run_migrations
+
+            await run_migrations()
+            await run_auto_seed()
+        except Exception:
+            logger.exception("startup_migrations_or_seeding_failed")
+
     try:
         yield
     finally:

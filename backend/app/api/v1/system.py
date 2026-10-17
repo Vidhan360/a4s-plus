@@ -74,3 +74,12 @@ async def meta() -> dict[str, Any]:
         },
         "disclaimer": DISCLAIMER,
     }
+
+
+@router.get("/db-status")
+async def db_status(session: DbSession) -> dict[str, Any]:
+    """Database schema and migration status inspection (no secrets)."""
+    from app.core.migration_runner import get_migration_status
+
+    return await get_migration_status(session)
+

@@ -18,6 +18,32 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PLACEHOLDER_MARKERS = ("CHANGE_ME", "changeme", "your-secret", "placeholder")
 
 
+def normalize_database_url(url: str | None) -> str | None:
+    """Normalize database connection URLs for async SQLAlchemy.
+
+    Cloud platforms like Render, Neon, Supabase and Heroku typically provide
+    connection strings with ``postgres://`` or ``postgresql://`` schemes and
+    ``sslmode=`` query parameters.
+
+    SQLAlchemy's ``create_async_engine()`` requires an async driver in the
+    scheme (``postgresql+asyncpg://``) to avoid defaulting to synchronous drivers
+    such as ``psycopg``/``psycopg2``, and ``asyncpg`` expects ``ssl=`` instead
+    of ``sslmode=``.
+    """
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://") :]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://") :]
+    elif url.startswith("sqlite://") and not url.startswith("sqlite+aiosqlite://"):
+        url = "sqlite+aiosqlite://" + url[len("sqlite://") :]
+
+    if "sslmode=" in url:
+        url = url.replace("sslmode=", "ssl=")
+    return url
+
+
 class Settings(BaseSettings):
     """Runtime settings, populated from environment variables / .env."""
 
@@ -86,13 +112,21 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _assemble_and_validate(self) -> Settings:
         if not self.database_url:
-            user = os.getenv("POSTGRES_USER", "a4s")
-            password = os.getenv("POSTGRES_PASSWORD", "")
-            host = os.getenv("POSTGRES_HOST", "localhost")
-            port = os.getenv("POSTGRES_PORT", "5432")
-            name = os.getenv("POSTGRES_DB", "a4s")
-            auth = f"{user}:{password}@" if password else f"{user}@"
-            self.database_url = f"postgresql+asyncpg://{auth}{host}:{port}/{name}"
+            raw_url = os.getenv("DATABASE_URL")
+            if raw_url:
+                self.database_url = raw_url
+            else:
+                user = os.getenv("POSTGRES_USER", "a4s")
+                password = os.getenv("POSTGRES_PASSWORD", "")
+                host = os.getenv("POSTGRES_HOST", "localhost")
+                port = os.getenv("POSTGRES_PORT", "5432")
+                name = os.getenv("POSTGRES_DB", "a4s")
+                auth = f"{user}:{password}@" if password else f"{user}@"
+                self.database_url = f"postgresql+asyncpg://{auth}{host}:{port}/{name}"
+
+        self.database_url = normalize_database_url(self.database_url)
+        if self.test_database_url:
+            self.test_database_url = normalize_database_url(self.test_database_url)
 
         if not self.redis_url:
             host = os.getenv("REDIS_HOST", "localhost")

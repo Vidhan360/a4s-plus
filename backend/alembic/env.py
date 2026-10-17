@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app import models  # noqa: F401  (registers all mappers)
-from app.core.config import settings
+from app.core.config import normalize_database_url, settings
 from app.core.database import Base
 
 config = context.config
@@ -25,7 +25,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-database_url = settings.database_url or ""
+database_url = normalize_database_url(settings.database_url) or ""
 if not database_url:
     raise RuntimeError("A4S_DATABASE_URL is not set. Copy .env.example to .env and fill it in.")
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))

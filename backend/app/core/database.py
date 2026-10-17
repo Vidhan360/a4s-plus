@@ -21,7 +21,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import NullPool
 from sqlalchemy.types import JSON, TypeDecorator
 
-from app.core.config import settings
+from app.core.config import normalize_database_url, settings
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_N_name)s",
@@ -88,7 +88,7 @@ class TimestampMixin:
 
 
 def _create_engine() -> AsyncEngine:
-    url = settings.database_url or ""
+    url = normalize_database_url(settings.database_url) or ""
     kwargs: dict = {"echo": settings.db_echo, "pool_pre_ping": True}
     if settings.env == "test":
         # Pytest gives each test its own event loop. A pooled asyncpg

@@ -11,11 +11,13 @@ from sqlalchemy import text
 from app.api.deps import DbSession
 from app.core.config import settings
 from app.core.events import get_event_bus
+from app.core.logging import get_logger
 from app.schemas.system import HealthCheckOut
 from app.services.dashboard_service import DISCLAIMER
 from app.services.prediction_service import get_prediction_service
 
 router = APIRouter(tags=["system"])
+logger = get_logger("app.system")
 STARTED_AT = time.time()
 
 
@@ -26,7 +28,8 @@ async def health(session: DbSession) -> HealthCheckOut:
         await session.execute(text("SELECT 1"))
         database = "ok"
     except Exception as exc:  # pragma: no cover - defensive
-        database = f"error: {type(exc).__name__}"
+        logger.exception("database_health_check_failed", extra={"error": str(exc)})
+        database = f"error: {type(exc).__name__}: {exc}"
 
     service = get_prediction_service()
     from app.simulation.engine import simulation_engine

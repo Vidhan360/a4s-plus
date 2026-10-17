@@ -14,6 +14,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine.url import make_url
 
 PLACEHOLDER_MARKERS = ("CHANGE_ME", "changeme", "your-secret", "placeholder")
 
@@ -23,12 +24,13 @@ def normalize_database_url(url: str | None) -> str | None:
 
     Cloud platforms like Render, Neon, Supabase and Heroku typically provide
     connection strings with ``postgres://`` or ``postgresql://`` schemes and
-    ``sslmode=`` query parameters.
+    various query parameters (such as ``sslmode=require``, ``channel_binding=require``).
 
     SQLAlchemy's ``create_async_engine()`` requires an async driver in the
     scheme (``postgresql+asyncpg://``) to avoid defaulting to synchronous drivers
     such as ``psycopg``/``psycopg2``, and ``asyncpg`` expects ``ssl=`` instead
-    of ``sslmode=``.
+    of ``sslmode=``. Unsupported query parameters for asyncpg (such as
+    ``channel_binding``, ``options``, etc.) are stripped to prevent TypeErrors.
     """
     if not url:
         return url
@@ -39,9 +41,43 @@ def normalize_database_url(url: str | None) -> str | None:
     elif url.startswith("sqlite://") and not url.startswith("sqlite+aiosqlite://"):
         url = "sqlite+aiosqlite://" + url[len("sqlite://") :]
 
-    if "sslmode=" in url:
-        url = url.replace("sslmode=", "ssl=")
-    return url
+    if not url.startswith("postgresql+asyncpg://"):
+        return url
+
+    u = make_url(url)
+    query_params = dict(u.query)
+
+    ssl_val = query_params.pop("ssl", None)
+    sslmode_val = query_params.pop("sslmode", None)
+    effective_ssl = ssl_val or sslmode_val
+
+    unsupported_params = {
+        "channel_binding",
+        "options",
+        "gssencmode",
+        "target_session_attrs",
+        "sslrootcert",
+        "sslcert",
+        "sslkey",
+        "application_name",
+        "connect_timeout",
+    }
+    for param in unsupported_params:
+        query_params.pop(param, None)
+
+    is_neon = bool(u.host and "neon.tech" in u.host)
+    if effective_ssl:
+        if effective_ssl.lower() in ("require", "prefer", "allow", "verify-ca", "verify-full", "true"):
+            query_params["ssl"] = "require"
+        elif effective_ssl.lower() in ("disable", "false"):
+            pass
+        else:
+            query_params["ssl"] = effective_ssl
+    elif is_neon:
+        query_params["ssl"] = "require"
+
+    new_url = u.set(drivername="postgresql+asyncpg", query=query_params)
+    return new_url.render_as_string(hide_password=False)
 
 
 class Settings(BaseSettings):

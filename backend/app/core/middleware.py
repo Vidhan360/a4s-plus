@@ -72,6 +72,18 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         return response
 
 
+DOCS_PATHS = ("/api/docs", "/api/redoc", "/docs", "/redoc")
+DOCS_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https://fastapi.tiangolo.com https://cdn.jsdelivr.net; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'none'"
+)
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
@@ -81,8 +93,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
+        is_docs = request.url.path in DOCS_PATHS
         for key, value in self._headers.items():
-            response.headers.setdefault(key, value)
+            if key == "Content-Security-Policy" and is_docs:
+                response.headers[key] = DOCS_CSP
+            else:
+                response.headers.setdefault(key, value)
         return response
 
 

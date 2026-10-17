@@ -68,3 +68,18 @@ def test_create_engine_uses_asyncpg_dialect_with_postgres_url() -> None:
         assert test_engine.dialect.name == "postgresql"
         assert test_engine.dialect.driver == "asyncpg"
         assert isinstance(test_engine.dialect, PGDialect_asyncpg)
+
+
+def test_normalize_database_url_strips_unsupported_params() -> None:
+    raw = (
+        "postgresql://user:pass@ep-xyz.aws.neon.tech/neondb"
+        "?sslmode=require&channel_binding=require&options=endpoint%3Dep-xyz&gssencmode=disable"
+    )
+    cleaned = normalize_database_url(raw)
+    assert cleaned == "postgresql+asyncpg://user:pass@ep-xyz.aws.neon.tech/neondb?ssl=require"
+
+
+def test_normalize_database_url_neon_auto_ssl() -> None:
+    raw = "postgresql://user:pass@ep-xyz-123.us-east-2.aws.neon.tech/neondb"
+    cleaned = normalize_database_url(raw)
+    assert cleaned == "postgresql+asyncpg://user:pass@ep-xyz-123.us-east-2.aws.neon.tech/neondb?ssl=require"

@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
@@ -204,6 +204,14 @@ def create_app() -> FastAPI:
             "docs": "/api/docs",
             "api": "/api/v1",
         }
+
+    @app.get("/docs", include_in_schema=False)
+    async def docs_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/api/docs", status_code=307)
+
+    @app.get("/redoc", include_in_schema=False)
+    async def redoc_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/api/redoc", status_code=307)
 
     return app
 
